@@ -8,14 +8,14 @@
 
     <!-- Basic Add-in Information -->
     <Id>12345678-1234-1234-1234-123456789012</Id>
-    <Version>1.43.0.0</Version>
+    <Version>1.44.0.0</Version>
     <ProviderName>InboxAgent Provider</ProviderName>
     <DefaultLocale>en-US</DefaultLocale>
-    <DisplayName DefaultValue="InboxAgentF"/>
+    <DisplayName DefaultValue="InboxAgentG"/>
     <Description DefaultValue="Advanced email tracking and event monitoring for Outlook Web"/>
-    <IconUrl DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-64.png"/>
-    <HighResolutionIconUrl DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-128.png"/>
-    <SupportUrl DefaultValue="https://jamesladd.github.io/outlook-addin/support"/>
+    <IconUrl DefaultValue="https://jamesladd.github.io/addin/assets/icon-64.png"/>
+    <HighResolutionIconUrl DefaultValue="https://jamesladd.github.io/addin/assets/icon-128.png"/>
+    <SupportUrl DefaultValue="https://jamesladd.github.io/addin/support"/>
 
     <!-- Hosts -->
     <Hosts>
@@ -33,7 +33,7 @@
     <FormSettings>
         <Form xsi:type="ItemRead">
             <DesktopSettings>
-                <SourceLocation DefaultValue="https://jamesladd.github.io/outlook-addin/taskpane.html"/>
+                <SourceLocation DefaultValue="https://jamesladd.github.io/addin/taskpane.html"/>
                 <RequestedHeight>250</RequestedHeight>
             </DesktopSettings>
         </Form>
@@ -155,15 +155,15 @@
             <!-- Resources -->
             <Resources>
                 <bt:Images>
-                    <bt:Image id="Icon.16x16" DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-16.png"/>
-                    <bt:Image id="Icon.32x32" DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-32.png"/>
-                    <bt:Image id="Icon.80x80" DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-80.png"/>
+                    <bt:Image id="Icon.16x16" DefaultValue="https://jamesladd.github.io/addin/assets/icon-16.png"/>
+                    <bt:Image id="Icon.32x32" DefaultValue="https://jamesladd.github.io/addin/assets/icon-32.png"/>
+                    <bt:Image id="Icon.80x80" DefaultValue="https://jamesladd.github.io/addin/assets/icon-80.png"/>
                 </bt:Images>
                 <bt:Urls>
-                    <bt:Url id="Commands.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/commands.html"/>
-                    <bt:Url id="Taskpane.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/taskpane.html"/>
-                    <bt:Url id="WebViewRuntime.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/commands.html"/>
-                    <bt:Url id="JSRuntime.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/launchevent.js"/>
+                    <bt:Url id="Commands.Url" DefaultValue="https://jamesladd.github.io/addin/commands.html"/>
+                    <bt:Url id="Taskpane.Url" DefaultValue="https://jamesladd.github.io/addin/taskpane.html"/>
+                    <bt:Url id="WebViewRuntime.Url" DefaultValue="https://jamesladd.github.io/addin/commands.html"/>
+                    <bt:Url id="JSRuntime.Url" DefaultValue="https://jamesladd.github.io/addin/launchevent.js"/>
                 </bt:Urls>
                 <bt:ShortStrings>
                     <bt:String id="GroupLabel" DefaultValue="InboxAgent"/>
