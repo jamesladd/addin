@@ -1,0 +1,1 @@
+Update the version in the manifest.xml before pushing a commit.

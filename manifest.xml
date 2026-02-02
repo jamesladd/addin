@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp
+        xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+        xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+        xsi:type="MailApp">
+
+    <!-- Basic Add-in Information -->
+    <Id>12345678-1234-1234-1234-123456789012</Id>
+    <Version>1.43.0.0</Version>
+    <ProviderName>InboxAgent Provider</ProviderName>
+    <DefaultLocale>en-US</DefaultLocale>
+    <DisplayName DefaultValue="InboxAgentF"/>
+    <Description DefaultValue="Advanced email tracking and event monitoring for Outlook Web"/>
+    <IconUrl DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-64.png"/>
+    <HighResolutionIconUrl DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-128.png"/>
+    <SupportUrl DefaultValue="https://jamesladd.github.io/outlook-addin/support"/>
+
+    <!-- Hosts -->
+    <Hosts>
+        <Host Name="Mailbox"/>
+    </Hosts>
+
+    <!-- Requirements -->
+    <Requirements>
+        <Sets>
+            <Set Name="Mailbox" MinVersion="1.13"/>
+        </Sets>
+    </Requirements>
+
+    <!-- Form Settings -->
+    <FormSettings>
+        <Form xsi:type="ItemRead">
+            <DesktopSettings>
+                <SourceLocation DefaultValue="https://jamesladd.github.io/outlook-addin/taskpane.html"/>
+                <RequestedHeight>250</RequestedHeight>
+            </DesktopSettings>
+        </Form>
+    </FormSettings>
+
+    <!-- Permissions -->
+    <Permissions>ReadWriteMailbox</Permissions>
+
+    <!-- All Form Factors -->
+    <Rule xsi:type="RuleCollection" Mode="Or">
+        <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
+        <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit"/>
+    </Rule>
+
+    <!-- Version Overrides 1.1 -->
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
+        <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+
+            <!-- Requirements for VersionOverrides -->
+            <Requirements>
+                <bt:Sets DefaultMinVersion="1.13">
+                    <bt:Set Name="Mailbox"/>
+                </bt:Sets>
+            </Requirements>
+
+            <!-- Hosts -->
+            <Hosts>
+                <Host xsi:type="MailHost">
+
+                    <!-- Runtimes for Event-based Activation -->
+                    <Runtimes>
+                        <Runtime resid="WebViewRuntime.Url">
+                            <Override type="javascript" resid="JSRuntime.Url"/>
+                        </Runtime>
+                    </Runtimes>
+
+                    <!-- Desktop Form Factor -->
+                    <DesktopFormFactor>
+
+                        <!-- Function File -->
+                        <FunctionFile resid="Commands.Url"/>
+
+                        <!-- Extension Point: Message Read Command Surface -->
+                        <ExtensionPoint xsi:type="MessageReadCommandSurface">
+                            <OfficeTab id="TabDefault">
+                                <Group id="msgReadGroup">
+                                    <Label resid="GroupLabel"/>
+
+                                    <!-- Taskpane Button -->
+                                    <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                                        <Label resid="TaskpaneButton.Label"/>
+                                        <Supertip>
+                                            <Title resid="TaskpaneButton.Label"/>
+                                            <Description resid="TaskpaneButton.Tooltip"/>
+                                        </Supertip>
+                                        <Icon>
+                                            <bt:Image size="16" resid="Icon.16x16"/>
+                                            <bt:Image size="32" resid="Icon.32x32"/>
+                                            <bt:Image size="80" resid="Icon.80x80"/>
+                                        </Icon>
+                                        <Action xsi:type="ShowTaskpane">
+                                            <SourceLocation resid="Taskpane.Url"/>
+                                            <!-- Pinnable TaskPane -->
+                                            <SupportsPinning>true</SupportsPinning>
+                                        </Action>
+                                    </Control>
+
+                                </Group>
+                            </OfficeTab>
+                        </ExtensionPoint>
+
+                        <!-- Extension Point: Message Compose Command Surface -->
+                        <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+                            <OfficeTab id="TabDefault">
+                                <Group id="msgComposeGroup">
+                                    <Label resid="GroupLabel"/>
+
+                                    <!-- Taskpane Button -->
+                                    <Control xsi:type="Button" id="msgComposeOpenPaneButton">
+                                        <Label resid="TaskpaneButton.Label"/>
+                                        <Supertip>
+                                            <Title resid="TaskpaneButton.Label"/>
+                                            <Description resid="TaskpaneButton.Tooltip"/>
+                                        </Supertip>
+                                        <Icon>
+                                            <bt:Image size="16" resid="Icon.16x16"/>
+                                            <bt:Image size="32" resid="Icon.32x32"/>
+                                            <bt:Image size="80" resid="Icon.80x80"/>
+                                        </Icon>
+                                        <Action xsi:type="ShowTaskpane">
+                                            <SourceLocation resid="Taskpane.Url"/>
+                                            <!-- Pinnable TaskPane -->
+                                            <SupportsPinning>true</SupportsPinning>
+                                        </Action>
+                                    </Control>
+
+                                </Group>
+                            </OfficeTab>
+                        </ExtensionPoint>
+
+                        <!-- Extension Point: Events (LaunchEvent) -->
+                        <ExtensionPoint xsi:type="LaunchEvent">
+                            <LaunchEvents>
+                                <LaunchEvent Type="OnNewMessageCompose" FunctionName="onNewMessageComposeHandler" SendMode="PromptUser"/>
+                                <LaunchEvent Type="OnMessageAttachmentsChanged" FunctionName="onMessageAttachmentsChangedHandler" SendMode="PromptUser"/>
+                                <LaunchEvent Type="OnMessageRecipientsChanged" FunctionName="onMessageRecipientsChangedHandler" SendMode="PromptUser"/>
+                                <LaunchEvent Type="OnInfoBarDismissClicked" FunctionName="onInfoBarDismissClickedHandler" SendMode="PromptUser"/>
+                                <LaunchEvent Type="OnMessageSend" FunctionName="onMessageSendHandler" SendMode="PromptUser"/>
+                                <LaunchEvent Type="OnMessageFromChanged" FunctionName="onMessageFromChangedHandler" SendMode="PromptUser"/>
+                                <LaunchEvent Type="OnSensitivityLabelChanged" FunctionName="onSensitivityLabelChangedHandler" SendMode="PromptUser"/>
+                            </LaunchEvents>
+                            <SourceLocation resid="WebViewRuntime.Url"/>
+                        </ExtensionPoint>
+
+                    </DesktopFormFactor>
+                </Host>
+            </Hosts>
+
+            <!-- Resources -->
+            <Resources>
+                <bt:Images>
+                    <bt:Image id="Icon.16x16" DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-16.png"/>
+                    <bt:Image id="Icon.32x32" DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-32.png"/>
+                    <bt:Image id="Icon.80x80" DefaultValue="https://jamesladd.github.io/outlook-addin/assets/icon-80.png"/>
+                </bt:Images>
+                <bt:Urls>
+                    <bt:Url id="Commands.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/commands.html"/>
+                    <bt:Url id="Taskpane.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/taskpane.html"/>
+                    <bt:Url id="WebViewRuntime.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/commands.html"/>
+                    <bt:Url id="JSRuntime.Url" DefaultValue="https://jamesladd.github.io/outlook-addin/launchevent.js"/>
+                </bt:Urls>
+                <bt:ShortStrings>
+                    <bt:String id="GroupLabel" DefaultValue="InboxAgent"/>
+                    <bt:String id="TaskpaneButton.Label" DefaultValue="InboxAgent"/>
+                </bt:ShortStrings>
+                <bt:LongStrings>
+                    <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open InboxAgent monitoring panel"/>
+                </bt:LongStrings>
+            </Resources>
+
+        </VersionOverrides>
+    </VersionOverrides>
+
+</OfficeApp>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>InboxAgent</title>
+
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+
+    <!-- Taskpane CSS -->
+    <link rel="stylesheet" type="text/css" href="taskpane.css">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>📬 InboxAgent</h1>
+        <p class="subtitle">Email Tracking & Event Monitor</p>
+    </header>
+
+    <section class="status-section">
+        <h2>Status</h2>
+        <div class="status-card">
+            <div class="status-item">
+                <span class="status-label">Deep Monitoring:</span>
+                <span id="monitoring-status" class="status-value active">Active</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Event Runtime:</span>
+                <span id="runtime-status" class="status-value">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Current Item:</span>
+                <span id="current-item" class="status-value">Loading...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Events Tracked:</span>
+                <span id="events-tracked" class="status-value">0</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="monitoring-section">
+        <h2>Recent Activities</h2>
+        <div id="activity-log" class="activity-log">
+            <div class="activity-item info">
+                <div class="activity-time">Just now</div>
+                <div class="activity-message">InboxAgent initialized</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="actions-section">
+        <h2>Actions</h2>
+        <button id="toggle-monitoring" class="btn btn-warning">Pause Monitoring</button>
+        <button id="clear-log" class="btn btn-secondary">Clear Log</button>
+        <button id="trigger-test-event" class="btn btn-primary">Trigger Test Event</button>
+    </section>
+
+    <section class="info-section">
+        <h2>Tracked Events</h2>
+        <ul class="info-list">
+            <li>✓ New Message Compose</li>
+            <li>✓ Attachments Changed</li>
+            <li>✓ Recipients Changed</li>
+            <li>✓ Message Send</li>
+            <li>✓ From Address Changed</li>
+            <li>✓ Sensitivity Label Changed</li>
+            <li>✓ Category Changes</li>
+            <li>✓ Flag Status Changes</li>
+            <li>✓ Read/Unread Status</li>
+            <li>✓ Reply/Forward Actions</li>
+            <li>✓ Junk/Not Junk Marking</li>
+            <li>✓ Email Moved/Deleted</li>
+        </ul>
+    </section>
+</div>
+
+<script type="text/javascript" src="queue.js"></script>
+
+<!-- IIFE to log taskpane loading immediately -->
+<script type="text/javascript">
+  (function() {
+    console.log('=== TASKPANE.HTML LOADING (IIFE) ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('Document ready state:', document.readyState);
+    console.log('Office object available:', typeof Office !== 'undefined');
+  })();
+</script>
+
+<script type="text/javascript" src="taskpane.js"></script>
+
+<script type="text/javascript">
+  (function() {
+    console.log('=== TASKPANE.HTML FULLY LOADED (IIFE) ===');
+    console.log('Timestamp:', new Date().toISOString());
+  })();
+</script>
+</body>
+</html>

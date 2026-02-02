@@ -1,0 +1,14 @@
+{
+  "name": "my-task-outlook-addin",
+  "version": "1.0.0",
+  "description": "Outlook Web Add-in with task pane",
+  "main": "taskpane.html",
+  "scripts": {
+    "start": "office-addin-debugging start manifest.xml",
+    "stop": "office-addin-debugging stop manifest.xml"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "office-addin-debugging": "^4.0.0"
+  }
+}
