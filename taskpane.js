@@ -15,6 +15,8 @@
   let lastReadStatus = null;
   let isPinned = false;
   let contextSwitchCount = 0;
+  let currentMailbox = null;
+  let currentItemFrom = null;
 
   // Initialize Office
   Office.onReady((info) => {
@@ -52,11 +54,13 @@
       const clearLogBtn = document.getElementById('clear-log');
       const toggleMonitoringBtn = document.getElementById('toggle-monitoring');
       const triggerTestBtn = document.getElementById('trigger-test-event');
+      const showAllMailboxesBtn = document.getElementById('show-all-mailboxes');
 
       console.log('DOM Elements Check:');
       console.log('  - clear-log:', clearLogBtn ? 'Found' : 'NOT FOUND');
       console.log('  - toggle-monitoring:', toggleMonitoringBtn ? 'Found' : 'NOT FOUND');
       console.log('  - trigger-test-event:', triggerTestBtn ? 'Found' : 'NOT FOUND');
+      console.log('  - show-all-mailboxes:', showAllMailboxesBtn ? 'Found' : 'NOT FOUND');
 
       if (!clearLogBtn || !toggleMonitoringBtn || !triggerTestBtn) {
         throw new Error('Required DOM elements not found');
@@ -66,6 +70,10 @@
       clearLogBtn.onclick = clearActivityLog;
       toggleMonitoringBtn.onclick = toggleMonitoring;
       triggerTestBtn.onclick = triggerTestEvent;
+
+      if (showAllMailboxesBtn) {
+        showAllMailboxesBtn.onclick = showMailboxActivity;
+      }
 
       console.log('Event handlers attached successfully');
 
@@ -80,7 +88,7 @@
       // Load current user information
       loadCurrentUserInfo();
 
-      // Update current item
+      // Update current item (this will also load the FROM address)
       updateCurrentItem();
 
       // Add Office event listeners
@@ -109,6 +117,89 @@
       console.error('Stack:', error.stack);
       logActivity('error', `Initialization failed: ${error.message}`);
     }
+  }
+
+  function getCurrentMailboxInfo() {
+    try {
+      const userProfile = Office.context.mailbox.userProfile;
+
+      let mailboxEmail = userProfile.emailAddress;
+      let mailboxName = userProfile.displayName;
+
+      return {
+        email: mailboxEmail,
+        name: mailboxName,
+        displayText: `${mailboxName} <${mailboxEmail}>`
+      };
+    } catch (error) {
+      console.error('Error getting mailbox info:', error);
+      return {
+        email: 'Unknown',
+        name: 'Unknown',
+        displayText: 'Unknown Mailbox'
+      };
+    }
+  }
+
+  function getCurrentItemFromInfo(callback) {
+    const item = Office.context.mailbox.item;
+
+    if (!item) {
+      callback(null);
+      return;
+    }
+
+    // For compose mode, there's no FROM (user is composing)
+    if (item.itemType === Office.MailboxEnums.ItemType.Message &&
+      item.itemClass && item.itemClass.includes('IPM.Note')) {
+
+      getPropertyValue(item, 'from', (fromValue) => {
+        if (fromValue) {
+          callback({
+            email: fromValue.emailAddress || 'Unknown',
+            name: fromValue.displayName || fromValue.emailAddress || 'Unknown',
+            displayText: fromValue.displayName ?
+              `${fromValue.displayName} <${fromValue.emailAddress}>` :
+              fromValue.emailAddress
+          });
+        } else {
+          callback(null);
+        }
+      });
+    } else {
+      // Compose mode - user is the sender
+      const userProfile = Office.context.mailbox.userProfile;
+      callback({
+        email: userProfile.emailAddress,
+        name: userProfile.displayName,
+        displayText: `${userProfile.displayName} <${userProfile.emailAddress}>`,
+        isComposing: true
+      });
+    }
+  }
+
+  function updateItemFromDisplay() {
+    getCurrentItemFromInfo((fromInfo) => {
+      const itemFromElement = document.getElementById('item-from');
+
+      if (itemFromElement) {
+        if (fromInfo) {
+          if (fromInfo.isComposing) {
+            itemFromElement.textContent = `${fromInfo.name} (composing)`;
+            itemFromElement.title = fromInfo.displayText;
+          } else {
+            itemFromElement.textContent = fromInfo.name;
+            itemFromElement.title = fromInfo.displayText;
+          }
+          currentItemFrom = fromInfo;
+          console.log('Item FROM updated:', fromInfo.displayText);
+        } else {
+          itemFromElement.textContent = 'N/A';
+          itemFromElement.title = 'No sender information available';
+          currentItemFrom = null;
+        }
+      }
+    });
   }
 
   function checkPinningStatus() {
@@ -332,6 +423,13 @@
         console.log('Account Type:', userProfile.accountType);
         console.log('Time Zone:', userProfile.timeZone);
 
+        // Store current mailbox info
+        currentMailbox = {
+          email: userProfile.emailAddress,
+          name: userProfile.displayName,
+          accountType: userProfile.accountType
+        };
+
         // Update UI
         document.getElementById('user-display-name').textContent = userProfile.displayName || 'N/A';
         document.getElementById('user-email').textContent = userProfile.emailAddress || 'N/A';
@@ -471,6 +569,9 @@
     console.log('=== TRIGGERING TEST EVENT ===');
     console.log('Timestamp:', new Date().toISOString());
 
+    const mailboxInfo = getCurrentMailboxInfo();
+    console.log('Current User Mailbox:', mailboxInfo);
+
     logActivity('info', 'Test event triggered - check console for details');
 
     const item = Office.context.mailbox.item;
@@ -481,6 +582,7 @@
       console.log('  - Item ID:', item.itemId || 'No ID (new item)');
       console.log('  - Conversation ID:', item.conversationId);
       console.log('  - Read Status:', item.read);
+      console.log('  - User Mailbox:', mailboxInfo.displayText);
 
       const testQueue = new Queue({ results: [], concurrency: 1 });
 
@@ -494,7 +596,10 @@
 
       testQueue.push(cb => {
         getPropertyValue(item, 'from', (value) => {
-          console.log('  - From:', JSON.stringify(value, null, 2));
+          console.log('  - From (Sender):', JSON.stringify(value, null, 2));
+          if (value) {
+            logActivity('info', `From: ${value.displayName || value.emailAddress}`);
+          }
           cb();
         });
       });
@@ -601,7 +706,8 @@
     console.log('Timestamp:', new Date().toISOString());
     console.log('Event Args:', JSON.stringify(args, null, 2));
 
-    logActivity('info', 'Item changed - Loading new item details');
+    logActivity('info', `Item changed - Loading new item details`);
+
     eventCounter++;
     updateEventCounter();
     updateCurrentItem();
@@ -637,20 +743,31 @@
     if (!item) {
       console.log('No item available');
       currentItemElement.textContent = 'No item selected';
+
+      // Clear the FROM display
+      const itemFromElement = document.getElementById('item-from');
+      if (itemFromElement) {
+        itemFromElement.textContent = 'N/A';
+      }
       return;
     }
 
-    console.log('Item available, getting subject...');
+    console.log('Item available, getting subject and from...');
 
     getPropertyValue(item, 'subject', (subject) => {
       const displaySubject = subject || '(No Subject)';
       currentItemElement.textContent =
         displaySubject.substring(0, 30) + (displaySubject.length > 30 ? '...' : '');
 
+      const mailboxInfo = getCurrentMailboxInfo();
       console.log('=== CURRENT ITEM UPDATED ===');
       console.log('Subject:', displaySubject);
       console.log('Item Type:', item.itemType);
       console.log('Item ID:', item.itemId || 'New item (no ID)');
+      console.log('User Mailbox:', mailboxInfo.displayText);
+
+      // Update the FROM display
+      updateItemFromDisplay();
     });
   }
 
@@ -749,7 +866,13 @@
       console.log('Email:', item.subject || 'Unknown');
 
       const statusChange = currentReadStatus ? 'marked as Read' : 'marked as Unread';
-      logActivity('warning', `Email ${statusChange}`);
+
+      // Include FROM info if available
+      if (currentItemFrom) {
+        logActivity('warning', `Email from ${currentItemFrom.name} ${statusChange}`);
+      } else {
+        logActivity('warning', `Email ${statusChange}`);
+      }
 
       eventCounter++;
       updateEventCounter();
@@ -767,11 +890,14 @@
 
     console.log('=== CAPTURING ITEM STATE ===');
 
+    const mailboxInfo = getCurrentMailboxInfo();
     const captureQueue = new Queue({ results: [], concurrency: 1 });
     const state = {
       itemType: item.itemType,
       itemId: item.itemId,
-      itemClass: item.itemClass || null
+      itemClass: item.itemClass || null,
+      userMailbox: mailboxInfo.email,
+      userMailboxName: mailboxInfo.name
     };
 
     // Capture subject
@@ -817,10 +943,14 @@
       });
     }
 
-    // Capture from
+    // Capture from (SENDER of the email)
     captureQueue.push(cb => {
       getPropertyValue(item, 'from', (value) => {
-        state.from = value;
+        if (value) {
+          state.from = value;
+          state.fromEmail = value.emailAddress;
+          state.fromName = value.displayName || value.emailAddress;
+        }
         cb();
       });
     });
@@ -858,6 +988,8 @@
       previousItemState = state;
       console.log('=== ITEM STATE CAPTURED ===');
       console.log('Captured at:', new Date().toISOString());
+      console.log('User Mailbox:', mailboxInfo.displayText);
+      console.log('Email From:', state.fromName || 'N/A');
       console.log('State:', JSON.stringify(state, null, 2));
       cb();
     });
@@ -883,7 +1015,9 @@
     if (!item && previousItemState.itemId) {
       console.log('=== ITEM DISAPPEARED ===');
       console.log('Previous item:', previousItemState.subject);
-      logActivity('error', `Email disappeared: "${previousItemState.subject}" - possibly marked as junk or deleted`);
+      console.log('From:', previousItemState.fromName);
+      console.log('User mailbox:', previousItemState.userMailbox);
+      logActivity('error', `Email from ${previousItemState.fromName || 'Unknown'} disappeared - possibly marked as junk or deleted`);
 
       previousItemState = null;
       return;
@@ -891,11 +1025,14 @@
 
     if (!item) return;
 
+    const mailboxInfo = getCurrentMailboxInfo();
     const checkQueue = new Queue({ results: [], concurrency: 1 });
     const currentState = {
       itemType: item.itemType,
       itemId: item.itemId,
-      itemClass: item.itemClass || null
+      itemClass: item.itemClass || null,
+      userMailbox: mailboxInfo.email,
+      userMailboxName: mailboxInfo.name
     };
 
     checkQueue.push(cb => {
@@ -938,7 +1075,11 @@
 
     checkQueue.push(cb => {
       getPropertyValue(item, 'from', (value) => {
-        currentState.from = value;
+        if (value) {
+          currentState.from = value;
+          currentState.fromEmail = value.emailAddress;
+          currentState.fromName = value.displayName || value.emailAddress;
+        }
         cb();
       });
     });
@@ -997,6 +1138,8 @@
     if (oldJSON !== newJSON) {
       console.log('=== ITEM STATE CHANGED ===');
       console.log('Comparison time:', new Date().toISOString());
+      console.log('User Mailbox:', newState.userMailbox);
+      console.log('Email From:', newState.fromName || 'N/A');
       console.log('Previous State:', oldJSON);
       console.log('Current State:', newJSON);
 
@@ -1050,11 +1193,11 @@
         console.log('✓', change);
       }
 
-      // Check From change
+      // Check From change (sender)
       const oldFrom = JSON.stringify(oldState.from || null);
       const newFrom = JSON.stringify(newState.from || null);
       if (oldFrom !== newFrom) {
-        const change = 'From address changed';
+        const change = `From: ${oldState.fromName || 'Unknown'} → ${newState.fromName || 'Unknown'}`;
         changes.push(change);
         logActivity('warning', change);
         console.log('✓', change);
@@ -1132,6 +1275,8 @@
         console.log('Conversation ID:', newState.conversationId);
         console.log('Original Subject:', oldState.subject);
         console.log('New Subject:', newState.subject);
+        console.log('Original From:', oldState.fromName);
+        console.log('User Mailbox:', newState.userMailbox);
 
         let actionType = 'UNKNOWN';
         if (newState.subject && oldState.subject) {
@@ -1142,7 +1287,7 @@
           }
         }
 
-        logActivity('success', `${actionType}: "${oldState.subject}"`);
+        logActivity('success', `${actionType} to email from ${oldState.fromName || 'Unknown'}: "${oldState.subject}"`);
 
         console.log('Detected Action:', actionType);
       }
@@ -1151,8 +1296,6 @@
 
   // Detect if email was marked as junk by monitoring item disappearance
   function detectJunkMarking(oldState, newState) {
-    console.log('=== CHECKING FOR JUNK MARKING ===');
-
     // Case 1: Item ID changed but we're still in the same context
     if (oldState.itemId && newState.itemId && oldState.itemId !== newState.itemId) {
       console.log('Item ID changed - email may have been moved');
@@ -1162,19 +1305,19 @@
     // Case 2: Item became null (disappeared)
     if (oldState.itemId && !newState.itemId) {
       console.log('Item disappeared - likely moved to Junk or Deleted');
-      logActivity('error', `Email disappeared: "${oldState.subject}" - possibly marked as junk`);
+      logActivity('error', `Email from ${oldState.fromName || 'Unknown'} disappeared - possibly marked as junk`);
 
       console.log('=== EMAIL MARKED AS JUNK (LIKELY) ===');
       console.log('Subject:', oldState.subject);
-      console.log('From:', oldState.from?.emailAddress);
+      console.log('From Name:', oldState.fromName);
+      console.log('From Email:', oldState.fromEmail);
       console.log('Item ID:', oldState.itemId);
+      console.log('User Mailbox:', oldState.userMailbox);
     }
   }
 
   // Simplified folder change detection (no EWS needed)
   function detectFolderChangeSimple(oldState, newState) {
-    console.log('=== CHECKING FOR FOLDER CHANGE (SIMPLE) ===');
-
     // If the item ID changed but conversation is the same, it might have moved
     if (oldState.itemId && newState.itemId && oldState.itemId !== newState.itemId) {
       // Check if it's the same conversation (not a reply/forward)
@@ -1186,8 +1329,10 @@
           console.log('Old Item ID:', oldState.itemId);
           console.log('New Item ID:', newState.itemId);
           console.log('Subject:', newState.subject);
+          console.log('From:', newState.fromName);
+          console.log('User Mailbox:', newState.userMailbox);
 
-          logActivity('warning', `Email may have been moved: "${newState.subject}"`);
+          logActivity('warning', `Email from ${newState.fromName || 'Unknown'} may have been moved: "${newState.subject}"`);
 
           eventCounter++;
           updateEventCounter();
@@ -1208,6 +1353,8 @@
         return;
       }
 
+      const mailboxInfo = getCurrentMailboxInfo();
+
       const activityItem = document.createElement('div');
       activityItem.className = `activity-item ${type}`;
 
@@ -1217,7 +1364,10 @@
 
       const msg = document.createElement('div');
       msg.className = 'activity-message';
-      msg.textContent = message;
+
+      // Include user mailbox in message with visual indicator
+      const mailboxShort = mailboxInfo.email.split('@')[0]; // Get part before @
+      msg.innerHTML = `<strong style="color: #667eea;">[${mailboxShort}]</strong> ${message}`;
 
       activityItem.appendChild(time);
       activityItem.appendChild(msg);
@@ -1233,8 +1383,130 @@
       while (activityLog.children.length > 50) {
         activityLog.removeChild(activityLog.lastChild);
       }
+
+      // Store event to history with mailbox and from info
+      const fromInfo = currentItemFrom ? {
+        email: currentItemFrom.email,
+        name: currentItemFrom.name
+      } : null;
+
+      storeEventToHistory(mailboxInfo.email, mailboxInfo.name, fromInfo, type, message);
+
     } catch (error) {
       console.error('Error logging activity:', error);
+    }
+  }
+
+  function storeEventToHistory(userMailbox, userMailboxName, fromInfo, type, message) {
+    try {
+      let history = JSON.parse(localStorage.getItem('inboxagent-history') || '[]');
+
+      history.push({
+        timestamp: new Date().toISOString(),
+        userMailbox: userMailbox,
+        userMailboxName: userMailboxName,
+        fromEmail: fromInfo ? fromInfo.email : null,
+        fromName: fromInfo ? fromInfo.name : null,
+        type: type,
+        message: message
+      });
+
+      // Keep last 500 events
+      if (history.length > 500) {
+        history = history.slice(-500);
+      }
+
+      localStorage.setItem('inboxagent-history', JSON.stringify(history));
+    } catch (error) {
+      console.error('Error storing event history:', error);
+    }
+  }
+
+  function showMailboxActivity() {
+    try {
+      const history = JSON.parse(localStorage.getItem('inboxagent-history') || '[]');
+
+      if (history.length === 0) {
+        logActivity('info', 'No activity history available yet');
+        console.log('No activity history available');
+        return;
+      }
+
+      // Group by user mailbox
+      const byMailbox = history.reduce((acc, event) => {
+        const key = event.userMailbox;
+        if (!acc[key]) {
+          acc[key] = {
+            name: event.userMailboxName || event.userMailbox,
+            events: []
+          };
+        }
+        acc[key].events.push(event);
+        return acc;
+      }, {});
+
+      // Also group by email sender
+      const bySender = history.filter(e => e.fromEmail).reduce((acc, event) => {
+        const key = event.fromEmail;
+        if (!acc[key]) {
+          acc[key] = {
+            name: event.fromName || event.fromEmail,
+            events: []
+          };
+        }
+        acc[key].events.push(event);
+        return acc;
+      }, {});
+
+      console.log('=== ACTIVITY BY USER MAILBOX ===');
+      console.log('Total events:', history.length);
+      console.log('User Mailboxes tracked:', Object.keys(byMailbox).length);
+      console.log('Email Senders tracked:', Object.keys(bySender).length);
+      console.log('');
+
+      Object.keys(byMailbox).forEach(mailbox => {
+        const data = byMailbox[mailbox];
+        console.log(`📬 User Mailbox: ${data.name} (${mailbox})`);
+        console.log(`   Total events: ${data.events.length}`);
+
+        // Count by type
+        const byType = data.events.reduce((acc, event) => {
+          acc[event.type] = (acc[event.type] || 0) + 1;
+          return acc;
+        }, {});
+
+        console.log('   Event types:', byType);
+        console.log('   Last 5 events:');
+        data.events.slice(-5).forEach(event => {
+          const fromInfo = event.fromName ? ` from ${event.fromName}` : '';
+          console.log(`     [${new Date(event.timestamp).toLocaleTimeString()}] ${event.type}${fromInfo}: ${event.message}`);
+        });
+        console.log('');
+      });
+
+      console.log('=== ACTIVITY BY EMAIL SENDER ===');
+      Object.keys(bySender).forEach(sender => {
+        const data = bySender[sender];
+        console.log(`📧 Sender: ${data.name} (${sender})`);
+        console.log(`   Events: ${data.events.length}`);
+        console.log('');
+      });
+
+      // Log summary to activity log
+      const mailboxCount = Object.keys(byMailbox).length;
+      const senderCount = Object.keys(bySender).length;
+      logActivity('success', `Activity Summary: ${history.length} events from ${senderCount} sender(s) across ${mailboxCount} mailbox(es)`);
+
+      Object.keys(byMailbox).forEach(mailbox => {
+        const data = byMailbox[mailbox];
+        const mailboxShort = mailbox.split('@')[0];
+        logActivity('info', `${mailboxShort}: ${data.events.length} events tracked`);
+      });
+
+      return { byMailbox, bySender };
+    } catch (error) {
+      console.error('Error showing mailbox activity:', error);
+      logActivity('error', 'Failed to load mailbox activity');
     }
   }
 
@@ -1249,9 +1521,10 @@
       }
 
       activityLog.innerHTML = '';
-      logActivity('info', 'Activity log cleared');
+      logActivity('info', 'Activity log cleared (history preserved)');
       console.log('=== ACTIVITY LOG CLEARED ===');
       console.log('Timestamp:', new Date().toISOString());
+      console.log('Note: Event history in localStorage is preserved');
     } catch (error) {
       console.error('Error clearing log:', error);
     }
