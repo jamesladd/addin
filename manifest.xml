@@ -8,10 +8,10 @@
 
     <!-- Basic Add-in Information -->
     <Id>12345678-1234-1234-1234-123456789012</Id>
-    <Version>1.46.0.0</Version>
+    <Version>1.47.0.0</Version>
     <ProviderName>InboxAgent Provider</ProviderName>
     <DefaultLocale>en-US</DefaultLocale>
-    <DisplayName DefaultValue="InboxAgentB"/>
+    <DisplayName DefaultValue="InboxAgentC"/>
     <Description DefaultValue="Advanced email tracking and event monitoring for Outlook Web"/>
     <IconUrl DefaultValue="https://jamesladd.github.io/addin/assets/icon-64.png"/>
     <HighResolutionIconUrl DefaultValue="https://jamesladd.github.io/addin/assets/icon-128.png"/>
@@ -65,20 +65,8 @@
 
                     <!-- Runtimes for Event-based Activation -->
                     <Runtimes>
-                        <!-- Shared Runtime for both taskpane and events -->
                         <Runtime resid="WebViewRuntime.Url">
                             <Override type="javascript" resid="JSRuntime.Url"/>
-                            <Actions>
-                                <Action xsi:type="ExecuteFunction" FunctionName="onNewMessageComposeHandler"/>
-                                <Action xsi:type="ExecuteFunction" FunctionName="onMessageAttachmentsChangedHandler"/>
-                                <Action xsi:type="ExecuteFunction" FunctionName="onMessageRecipientsChangedHandler"/>
-                                <Action xsi:type="ExecuteFunction" FunctionName="onInfoBarDismissClickedHandler"/>
-                                <Action xsi:type="ExecuteFunction" FunctionName="onMessageSendHandler"/>
-                                <Action xsi:type="ExecuteFunction" FunctionName="onMessageFromChangedHandler"/>
-                                <Action xsi:type="ExecuteFunction" FunctionName="onSensitivityLabelChangedHandler"/>
-                            </Actions>
-                            <Lifetime>short</Lifetime>
-                            <SupportsSharedRuntime>true</SupportsSharedRuntime>
                         </Runtime>
                     </Runtimes>
 
@@ -174,7 +162,7 @@
                 <bt:Urls>
                     <bt:Url id="Commands.Url" DefaultValue="https://jamesladd.github.io/addin/commands.html"/>
                     <bt:Url id="Taskpane.Url" DefaultValue="https://jamesladd.github.io/addin/taskpane.html"/>
-                    <bt:Url id="WebViewRuntime.Url" DefaultValue="https://jamesladd.github.io/addin/taskpane.html"/>
+                    <bt:Url id="WebViewRuntime.Url" DefaultValue="https://jamesladd.github.io/addin/commands.html"/>
                     <bt:Url id="JSRuntime.Url" DefaultValue="https://jamesladd.github.io/addin/launchevent.js"/>
                 </bt:Urls>
                 <bt:ShortStrings>
