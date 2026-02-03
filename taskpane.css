@@ -336,3 +336,23 @@ section h2 {
     white-space: normal;
     word-break: break-all;
 }
+
+/* Add to taskpane.css */
+.pin-reminder {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 0 20px 10px rgba(255, 193, 7, 0);
+    }
+}
+
+.pin-reminder.hidden {
+    display: none;
+}

@@ -13,6 +13,8 @@
   let previousItemState = null;
   let isInitialized = false;
   let lastReadStatus = null;
+  let isPinned = false;
+  let contextSwitchCount = 0;
 
   // Initialize Office
   Office.onReady((info) => {
@@ -20,6 +22,12 @@
     console.log('Timestamp:', new Date().toISOString());
     console.log('Host:', info.host);
     console.log('Platform:', info.platform);
+
+    // Runtime checks
+    console.log('=== RUNTIME CHECK ===');
+    console.log('Supports Shared Runtime:', Office.context.requirements.isSetSupported('SharedRuntime', '1.1'));
+    console.log('Mailbox version:', Office.context.mailbox.diagnostics.hostVersion);
+    console.log('Host Name:', Office.context.mailbox.diagnostics.hostName);
 
     if (info.host === Office.HostType.Outlook) {
       // Use setTimeout to ensure DOM is ready
@@ -61,12 +69,15 @@
 
       console.log('Event handlers attached successfully');
 
+      // Check pinning status and provide guidance
+      checkPinningStatus();
+
       logActivity('info', 'InboxAgent taskpane initialized');
 
       // Check for event runtime
       checkEventRuntime();
 
-      // **ADD THIS: Load current user information**
+      // Load current user information
       loadCurrentUserInfo();
 
       // Update current item
@@ -80,6 +91,9 @@
         startDeepMonitoring();
         logActivity('success', 'Deep monitoring started automatically');
       }, 500);
+
+      // Set up persistence check
+      setUpPersistenceMonitoring();
 
       isInitialized = true;
 
@@ -95,6 +109,209 @@
       console.error('Stack:', error.stack);
       logActivity('error', `Initialization failed: ${error.message}`);
     }
+  }
+
+  function checkPinningStatus() {
+    console.log('=== CHECKING PINNING STATUS ===');
+    console.log('Timestamp:', new Date().toISOString());
+
+    try {
+      // Check if already pinned (from localStorage)
+      const userHasPinned = localStorage.getItem('inboxagent-pinned');
+
+      if (userHasPinned === 'true') {
+        // Hide the reminder
+        const reminder = document.getElementById('pin-reminder');
+        if (reminder) {
+          reminder.classList.add('hidden');
+        }
+        console.log('User has previously pinned - reminder hidden');
+        logActivity('success', '✓ Taskpane is pinned!');
+      } else {
+        // Show the reminder and set up the "Got it" button
+        const gotItBtn = document.getElementById('got-it-pin');
+        if (gotItBtn) {
+          gotItBtn.onclick = () => {
+            // User acknowledged - hide reminder
+            const reminder = document.getElementById('pin-reminder');
+            if (reminder) {
+              reminder.style.transition = 'all 0.3s ease-out';
+              reminder.style.opacity = '0';
+              reminder.style.transform = 'scale(0.95)';
+
+              setTimeout(() => {
+                reminder.classList.add('hidden');
+              }, 300);
+            }
+
+            // Save preference
+            localStorage.setItem('inboxagent-pinned', 'true');
+
+            logActivity('success', '👍 Great! Now click the 📌 pin icon in the top-right corner');
+
+            console.log('⭐ USER ACKNOWLEDGED PIN REQUEST');
+          };
+        }
+      }
+
+      // Check if UI context is available
+      if (Office.context.ui) {
+        console.log('UI Context available');
+
+        // Try to detect if pinned (read-only)
+        if (typeof Office.context.ui.isPinned !== 'undefined') {
+          isPinned = Office.context.ui.isPinned;
+          console.log('Pinning status:', isPinned ? 'PINNED' : 'NOT PINNED');
+
+          if (isPinned) {
+            // User has pinned! Save this
+            localStorage.setItem('inboxagent-pinned', 'true');
+
+            // Hide reminder
+            const reminder = document.getElementById('pin-reminder');
+            if (reminder) {
+              reminder.classList.add('hidden');
+            }
+
+            logActivity('success', '✓ Taskpane is pinned!');
+          }
+        } else {
+          console.log('Pinning status not available via API');
+        }
+      }
+
+      // If not acknowledged yet, show helpful messages
+      if (userHasPinned !== 'true') {
+        setTimeout(() => {
+          logActivity('info', '💡 Click the 📌 pin icon to keep this pane open');
+          logActivity('info', '📌 Pinning keeps the taskpane visible when composing emails');
+        }, 2000);
+      }
+
+    } catch (error) {
+      console.error('Error checking pinning status:', error);
+    }
+  }
+
+  function setUpPersistenceMonitoring() {
+    console.log('=== SETTING UP PERSISTENCE MONITORING ===');
+
+    // Monitor if taskpane stays visible across context switches
+    if (Office.context.mailbox.addHandlerAsync) {
+      Office.context.mailbox.addHandlerAsync(
+        Office.EventType.ItemChanged,
+        () => {
+          contextSwitchCount++;
+          console.log('Context switch detected. Count:', contextSwitchCount);
+
+          if (!document.hidden && contextSwitchCount > 1) {
+            // Taskpane stayed visible through context switch = likely pinned!
+            console.log('✓ TASKPANE PERSISTED THROUGH CONTEXT SWITCH');
+            console.log('Context switches:', contextSwitchCount);
+
+            if (!isPinned) {
+              isPinned = true;
+              localStorage.setItem('inboxagent-pinned', 'true');
+
+              // Hide reminder
+              const reminder = document.getElementById('pin-reminder');
+              if (reminder && !reminder.classList.contains('hidden')) {
+                reminder.style.transition = 'all 0.3s ease-out';
+                reminder.style.opacity = '0';
+                reminder.style.transform = 'scale(0.95)';
+
+                setTimeout(() => {
+                  reminder.classList.add('hidden');
+                }, 300);
+
+                logActivity('success', '🎉 Taskpane is now pinned and will stay visible!');
+              }
+            }
+          } else if (document.hidden && contextSwitchCount > 0) {
+            console.log('⚠ Taskpane hidden after context switch - not pinned');
+            logActivity('warning', 'Taskpane was closed. Pin it to keep it visible!');
+          }
+        },
+        (result) => {
+          if (result.status === Office.AsyncResultStatus.Succeeded) {
+            console.log('✓ ItemChanged handler for persistence monitoring attached');
+          } else {
+            console.error('Failed to attach ItemChanged handler:', result.error);
+          }
+        }
+      );
+    }
+
+    // Monitor visibility changes
+    let visibilityCheckCount = 0;
+    const visibilityInterval = setInterval(() => {
+      visibilityCheckCount++;
+
+      if (!document.hidden) {
+        // Taskpane is visible
+        if (visibilityCheckCount % 20 === 0) { // Log every 20 checks (20 seconds)
+          console.log('✓ Taskpane visibility check:', visibilityCheckCount, '- VISIBLE');
+        }
+      } else {
+        console.log('⚠ Taskpane is hidden');
+      }
+
+      // Stop checking after 5 minutes
+      if (visibilityCheckCount > 300) {
+        clearInterval(visibilityInterval);
+        console.log('Stopped visibility monitoring after 5 minutes');
+      }
+    }, 1000);
+
+    // Listen for visibility change events
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        console.log('=== TASKPANE HIDDEN ===');
+        console.log('Timestamp:', new Date().toISOString());
+
+        const userHasPinned = localStorage.getItem('inboxagent-pinned');
+        if (userHasPinned !== 'true') {
+          logActivity('warning', 'Taskpane hidden - pin it to keep visible');
+        }
+      } else {
+        console.log('=== TASKPANE VISIBLE ===');
+        console.log('Timestamp:', new Date().toISOString());
+        logActivity('success', 'Taskpane is now visible');
+
+        // Refresh monitoring when taskpane becomes visible again
+        if (isMonitoring && !monitoringInterval) {
+          startDeepMonitoring();
+        }
+      }
+    });
+
+    // Listen for beforeunload (taskpane closing)
+    window.addEventListener('beforeunload', () => {
+      console.log('=== TASKPANE CLOSING ===');
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('Events tracked:', eventCounter);
+      console.log('Context switches:', contextSwitchCount);
+
+      // Clean up
+      if (monitoringInterval) {
+        clearInterval(monitoringInterval);
+      }
+    });
+
+    // Listen for page show/hide (back/forward navigation)
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        console.log('=== TASKPANE RESTORED FROM CACHE ===');
+        logActivity('info', 'Taskpane restored');
+
+        // Reinitialize monitoring
+        if (isMonitoring) {
+          startDeepMonitoring();
+        }
+      }
+    });
+
+    console.log('✓ Persistence monitoring configured');
   }
 
   function loadCurrentUserInfo() {
