@@ -66,6 +66,9 @@
       // Check for event runtime
       checkEventRuntime();
 
+      // **ADD THIS: Load current user information**
+      loadCurrentUserInfo();
+
       // Update current item
       updateCurrentItem();
 
@@ -91,6 +94,95 @@
       console.error('Error:', error);
       console.error('Stack:', error.stack);
       logActivity('error', `Initialization failed: ${error.message}`);
+    }
+  }
+
+  function loadCurrentUserInfo() {
+    console.log('=== LOADING USER INFORMATION ===');
+    console.log('Timestamp:', new Date().toISOString());
+
+    try {
+      const userProfile = Office.context.mailbox.userProfile;
+      const diagnostics = Office.context.mailbox.diagnostics;
+      const mailbox = Office.context.mailbox;
+
+      if (userProfile) {
+        console.log('=== COMPLETE USER PROFILE ===');
+
+        // Basic Info
+        console.log('Display Name:', userProfile.displayName);
+        console.log('Email Address:', userProfile.emailAddress);
+        console.log('Account Type:', userProfile.accountType);
+        console.log('Time Zone:', userProfile.timeZone);
+
+        // Update UI
+        document.getElementById('user-display-name').textContent = userProfile.displayName || 'N/A';
+        document.getElementById('user-email').textContent = userProfile.emailAddress || 'N/A';
+        document.getElementById('user-account-type').textContent = userProfile.accountType || 'N/A';
+        document.getElementById('user-timezone').textContent = userProfile.timeZone || 'N/A';
+
+        console.log('=== MAILBOX DIAGNOSTICS ===');
+        console.log('Host Name:', diagnostics.hostName);
+        console.log('Host Version:', diagnostics.hostVersion);
+
+        // Convert REST endpoint to readable format
+        const restUrl = mailbox.restUrl;
+        console.log('REST URL:', restUrl);
+
+        // EWS endpoint
+        const ewsUrl = mailbox.ewsUrl;
+        console.log('EWS URL:', ewsUrl);
+
+        // Additional diagnostic info
+        if (diagnostics.OWAView) {
+          console.log('OWA View:', diagnostics.OWAView);
+        }
+
+        console.log('=== MAILBOX SETTINGS ===');
+
+        // Get mailbox settings (require REST call for full details)
+        const settings = Office.context.roamingSettings;
+        console.log('Roaming Settings Available:', settings !== null);
+
+        // Log activity with full user context
+        const userContext = `${userProfile.displayName} (${userProfile.emailAddress})`;
+        logActivity('success', `User loaded: ${userContext}`);
+        logActivity('info', `Account Type: ${userProfile.accountType}`);
+        logActivity('info', `Time Zone: ${userProfile.timeZone}`);
+
+        console.log('=== USER INFORMATION LOADED SUCCESSFULLY ===');
+
+        return {
+          displayName: userProfile.displayName,
+          emailAddress: userProfile.emailAddress,
+          accountType: userProfile.accountType,
+          timeZone: userProfile.timeZone,
+          hostName: diagnostics.hostName,
+          hostVersion: diagnostics.hostVersion,
+          restUrl: restUrl,
+          ewsUrl: ewsUrl
+        };
+
+      } else {
+        throw new Error('User profile not available');
+      }
+
+    } catch (error) {
+      console.error('=== ERROR LOADING USER INFORMATION ===');
+      console.error('Error:', error);
+      console.error('Stack:', error.stack);
+      logActivity('error', `Failed to load user info: ${error.message}`);
+
+      // Set error states
+      ['user-display-name', 'user-email', 'user-account-type', 'user-timezone'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = 'Error';
+          element.classList.add('inactive');
+        }
+      });
+
+      return null;
     }
   }
 
