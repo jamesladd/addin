@@ -803,13 +803,13 @@
       logActivity('warning', 'Deep monitoring paused');
     }
 
-    console.log('=== MONITORING TOGGLED ===');
+    console.log('=== MONITORING TOGGLED XXX ===');
     console.log('Monitoring Active:', isMonitoring);
     console.log('Timestamp:', new Date().toISOString());
   }
 
   function startDeepMonitoring() {
-    console.log('=== STARTING DEEP MONITORING ===');
+    console.log('=== STARTING DEEP MONITORING XXX ===');
 
     try {
       captureCurrentItemState();
@@ -848,7 +848,7 @@
     previousItemState = null;
     lastReadStatus = null;
 
-    console.log('=== DEEP MONITORING STOPPED ===');
+    console.log('=== DEEP MONITORING STOPPED XXX ===');
     console.log('Timestamp:', new Date().toISOString());
   }
 
